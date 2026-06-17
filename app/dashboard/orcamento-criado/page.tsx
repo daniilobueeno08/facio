@@ -1,12 +1,10 @@
 import Link from "next/link";
+import GeneratePdfButton from "./GeneratePdfButton";
 
 const C = { bg:"#FFFFFF", surface:"#F4F6F3", text:"#1A1A2E", muted:"#6B7280", border:"#E5E7EB", primary:"#639922", pale:"#EAF3DE", navy:"#1A1A2E" };
 
-export default async function OrcamentoCriadoPage({ searchParams }: { searchParams: Promise<{ slug?: string }> }) {
-  const { slug } = await searchParams;
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://facio.app";
-  const link = `${baseUrl}/o/${slug}`;
-  const whatsappText = encodeURIComponent(`Olá! Aqui está o orçamento do serviço: ${link}`);
+export default async function OrcamentoCriadoPage({ searchParams }: { searchParams: Promise<{ slug?: string; id?: string }> }) {
+  const { id } = await searchParams;
 
   return (
     <main style={{ minHeight:"100vh", background:C.surface, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
@@ -16,23 +14,18 @@ export default async function OrcamentoCriadoPage({ searchParams }: { searchPara
           Orçamento criado!
         </h1>
         <p style={{ fontSize:13, color:C.muted, marginBottom:24 }}>
-          Envie o link abaixo para o seu cliente
+          Gere o PDF para enviar ao cliente — ele fica salvo aqui como histórico
         </p>
 
-        <div style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:12, padding:"12px 14px", fontSize:13, color:C.text, marginBottom:16, wordBreak:"break-all" }}>
-          {link}
-        </div>
+        {id ? (
+          <GeneratePdfButton quoteId={id} />
+        ) : (
+          <p style={{ fontSize:13, color:"#ef4444" }}>
+            Identificador do orçamento não encontrado. Volte ao painel e tente novamente.
+          </p>
+        )}
 
-        <a
-          href={`https://wa.me/?text=${whatsappText}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display:"block", background:C.primary, color:"#fff", fontWeight:600, fontFamily:"var(--font-display)", fontSize:14, padding:"14px 0", borderRadius:12, textDecoration:"none", marginBottom:12 }}
-        >
-          Enviar pelo WhatsApp
-        </a>
-
-        <Link href="/dashboard" style={{ fontSize:13, color:C.muted, textDecoration:"none" }}>
+        <Link href="/dashboard" style={{ display:"block", fontSize:13, color:C.muted, textDecoration:"none", marginTop:20 }}>
           Voltar ao painel
         </Link>
       </div>

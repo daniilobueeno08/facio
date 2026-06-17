@@ -78,7 +78,7 @@ export async function createQuote(formData: FormData) {
     tipo:      "orcamento_enviado",
   });
 
-  redirect(`/dashboard/orcamento-criado?slug=${quote.slug}`);
+  redirect(`/dashboard/orcamento-criado?slug=${quote.slug}&id=${quote.id}`);
 }
 
 export async function getServiceCatalog() {

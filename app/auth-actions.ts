@@ -25,10 +25,11 @@ export async function signUp(formData: FormData) {
   });
 
   if (error) {
-    if (error.message.includes("already registered")) {
-      return { error: "Este e-mail já está cadastrado." };
+    const msg = error.message.toLowerCase();
+    if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+      return { error: "Este e-mail já está cadastrado. Verifique sua caixa de entrada para confirmar a conta, ou faça login." };
     }
-    return { error: "Não foi possível criar a conta. Tente novamente." };
+    return { error: `Não foi possível criar a conta: ${error.message}` };
   }
 
   redirect("/dashboard");
@@ -46,6 +47,10 @@ export async function signIn(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes("confirm")) {
+      return { error: "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada." };
+    }
     return { error: "E-mail ou senha incorretos." };
   }
 

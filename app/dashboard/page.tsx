@@ -40,8 +40,14 @@ export default async function DashboardPage() {
         <p style={{ fontSize:13, color:C.muted, marginBottom:24 }}>Seus orçamentos recentes</p>
 
         <Link href="/dashboard/novo-orcamento" style={{ textDecoration:"none" }}>
-          <div style={{ background:C.primary, color:"#fff", borderRadius:14, padding:"16px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:14, marginBottom:24 }}>
+          <div style={{ background:C.primary, color:"#fff", borderRadius:14, padding:"16px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:14, marginBottom:12 }}>
             + Novo orçamento
+          </div>
+        </Link>
+
+        <Link href="/dashboard/historico" style={{ textDecoration:"none" }}>
+          <div style={{ background:"#fff", border:`1px solid ${C.border}`, color:C.navy, borderRadius:14, padding:"14px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:13, marginBottom:24 }}>
+            Ver histórico completo
           </div>
         </Link>
 
