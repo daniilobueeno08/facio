@@ -1,0 +1,77 @@
+import { createClient } from "@/lib/supabase/server";
+import { signOut } from "@/app/auth-actions";
+import Link from "next/link";
+
+const C = { bg:"#FFFFFF", surface:"#F4F6F3", text:"#1A1A2E", muted:"#6B7280", border:"#E5E7EB", primary:"#639922", pale:"#EAF3DE", navy:"#1A1A2E" };
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("nome")
+    .eq("id", user?.id)
+    .single();
+
+  const { data: quotes } = await supabase
+    .from("quotes")
+    .select("id, slug, status, total, created_at, clients(nome)")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  return (
+    <main style={{ minHeight:"100vh", background:C.surface }}>
+      <header style={{ background:C.bg, borderBottom:`1px solid ${C.border}`, padding:"16px 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <span style={{ fontFamily:"var(--font-display)", fontWeight:700, fontSize:18, color:C.navy }}>
+          fa<span style={{ color:C.primary }}>c</span>io
+        </span>
+        <form action={signOut}>
+          <button type="submit" style={{ fontSize:12, color:C.muted, background:"none", border:"none", cursor:"pointer" }}>
+            Sair
+          </button>
+        </form>
+      </header>
+
+      <div style={{ maxWidth:480, margin:"0 auto", padding:"24px 20px" }}>
+        <h1 style={{ fontFamily:"var(--font-display)", fontWeight:600, fontSize:18, color:C.navy, marginBottom:4 }}>
+          Olá, {profile?.nome ?? "👋"}
+        </h1>
+        <p style={{ fontSize:13, color:C.muted, marginBottom:24 }}>Seus orçamentos recentes</p>
+
+        <Link href="/dashboard/novo-orcamento" style={{ textDecoration:"none" }}>
+          <div style={{ background:C.primary, color:"#fff", borderRadius:14, padding:"16px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:14, marginBottom:24 }}>
+            + Novo orçamento
+          </div>
+        </Link>
+
+        {(!quotes || quotes.length === 0) && (
+          <p style={{ fontSize:13, color:C.muted, textAlign:"center", padding:"32px 0" }}>
+            Nenhum orçamento ainda. Crie o primeiro acima.
+          </p>
+        )}
+
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {(quotes ?? []).map((q) => {
+            const client = q.clients as unknown as { nome:string } | null;
+            return (
+              <a
+                key={q.id}
+                href={`/o/${q.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ textDecoration:"none", background:C.bg, border:`1px solid ${C.border}`, borderRadius:14, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}
+              >
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:C.text }}>{client?.nome ?? "Cliente"}</div>
+                  <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{q.status}</div>
+                </div>
+                <div style={{ fontSize:14, fontWeight:600, color:C.primary }}>R$ {Number(q.total).toFixed(2)}</div>
+              </a>
+            );
+          })}
+        </div>
+      </div>
+    </main>
+  );
+}
