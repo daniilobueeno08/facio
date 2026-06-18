@@ -16,7 +16,7 @@ export default async function DashboardPage() {
 
   const { data: quotes } = await supabase
     .from("quotes")
-    .select("id, slug, status, total, created_at, clients(nome)")
+    .select("id, status, total, pdf_url, created_at, clients(nome)")
     .order("created_at", { ascending: false })
     .limit(10);
 
@@ -60,20 +60,24 @@ export default async function DashboardPage() {
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
           {(quotes ?? []).map((q) => {
             const client = q.clients as unknown as { nome:string } | null;
+            const href = q.pdf_url ?? "/dashboard/historico";
+            const isExternal = Boolean(q.pdf_url);
             return (
-              <a
+              <Link
                 key={q.id}
-                href={`/o/${q.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={href}
+                target={isExternal ? "_blank" : undefined}
+                rel={isExternal ? "noopener noreferrer" : undefined}
                 style={{ textDecoration:"none", background:C.bg, border:`1px solid ${C.border}`, borderRadius:14, padding:"14px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}
               >
                 <div>
                   <div style={{ fontSize:13, fontWeight:600, color:C.text }}>{client?.nome ?? "Cliente"}</div>
-                  <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{q.status}</div>
+                  <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>
+                    {q.status}{!q.pdf_url && " · sem PDF"}
+                  </div>
                 </div>
                 <div style={{ fontSize:14, fontWeight:600, color:C.primary }}>R$ {Number(q.total).toFixed(2)}</div>
-              </a>
+              </Link>
             );
           })}
         </div>

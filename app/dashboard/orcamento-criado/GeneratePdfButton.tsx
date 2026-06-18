@@ -4,8 +4,10 @@ import { useState } from "react";
 
 const C = { primary:"#639922", pale:"#EAF3DE", dark:"#3B6D11", muted:"#6B7280", border:"#E5E7EB" };
 
-export default function GeneratePdfButton({ quoteId }: { quoteId: string }) {
-  const [pdfUrl, setPdfUrl]   = useState<string | null>(null);
+export default function GeneratePdfButton({
+  quoteId, initialPdfUrl,
+}: { quoteId: string; initialPdfUrl: string | null }) {
+  const [pdfUrl, setPdfUrl]   = useState<string | null>(initialPdfUrl);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
 

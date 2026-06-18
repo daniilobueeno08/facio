@@ -153,7 +153,7 @@ export default function NovoOrcamentoPage() {
           disabled={loading}
           style={{ width:"100%", background:C.primary, color:"#fff", fontWeight:600, fontFamily:"var(--font-display)", fontSize:14, padding:"15px 0", borderRadius:14, border:"none", cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1 }}
         >
-          {loading ? "Gerando link…" : "Gerar orçamento e link"}
+          {loading ? "Gerando orçamento…" : "Gerar orçamento"}
         </button>
       </form>
     </main>

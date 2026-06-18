@@ -3,8 +3,8 @@ import GeneratePdfButton from "./GeneratePdfButton";
 
 const C = { bg:"#FFFFFF", surface:"#F4F6F3", text:"#1A1A2E", muted:"#6B7280", border:"#E5E7EB", primary:"#639922", pale:"#EAF3DE", navy:"#1A1A2E" };
 
-export default async function OrcamentoCriadoPage({ searchParams }: { searchParams: Promise<{ slug?: string; id?: string }> }) {
-  const { id } = await searchParams;
+export default async function OrcamentoCriadoPage({ searchParams }: { searchParams: Promise<{ id?: string; pdfUrl?: string }> }) {
+  const { id, pdfUrl } = await searchParams;
 
   return (
     <main style={{ minHeight:"100vh", background:C.surface, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
@@ -14,11 +14,13 @@ export default async function OrcamentoCriadoPage({ searchParams }: { searchPara
           Orçamento criado!
         </h1>
         <p style={{ fontSize:13, color:C.muted, marginBottom:24 }}>
-          Gere o PDF para enviar ao cliente — ele fica salvo aqui como histórico
+          {pdfUrl
+            ? "O PDF já está pronto — envie ao cliente pelo WhatsApp"
+            : "Gere o PDF para enviar ao cliente — ele fica salvo aqui como histórico"}
         </p>
 
         {id ? (
-          <GeneratePdfButton quoteId={id} />
+          <GeneratePdfButton quoteId={id} initialPdfUrl={pdfUrl ?? null} />
         ) : (
           <p style={{ fontSize:13, color:"#ef4444" }}>
             Identificador do orçamento não encontrado. Volte ao painel e tente novamente.
