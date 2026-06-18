@@ -1,7 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { QuotePdfDocument, type QuotePdfData } from "@/lib/pdf/QuotePdfDocument";
 
 function generateSlug(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem caracteres ambíguos (0,O,1,I)
@@ -78,7 +80,54 @@ export async function createQuote(formData: FormData) {
     tipo:      "orcamento_enviado",
   });
 
-  redirect(`/dashboard/orcamento-criado?slug=${quote.slug}&id=${quote.id}`);
+  // 5. gera o PDF automaticamente, sem precisar de um clique extra do usuário
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("nome, whatsapp")
+    .eq("id", user.id)
+    .single();
+
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://facio.app";
+
+  const pdfData: QuotePdfData = {
+    providerName:  profile?.nome     ?? "Prestador",
+    providerWhats: profile?.whatsapp ?? "",
+    clientName,
+    clientWhats:   clientWhatsapp,
+    status:        "sent",
+    total,
+    notes:         null,
+    createdAt:     new Date().toISOString(),
+    items: items.map((i) => ({ ...i, subtotal: i.quantidade * i.valor_unit })),
+    publicUrl:     `${baseUrl}/o/${quote.slug}`,
+  };
+
+  let pdfUrl: string | null = null;
+
+  try {
+    const pdfBuffer = await renderToBuffer(<QuotePdfDocument data={pdfData} />);
+    const admin     = createServiceClient();
+    const filePath  = `${user.id}/${quote.slug}.pdf`;
+
+    const { error: uploadError } = await admin.storage
+      .from("quotes")
+      .upload(filePath, pdfBuffer, { contentType: "application/pdf", upsert: true });
+
+    if (!uploadError) {
+      const { data: publicUrlData } = admin.storage.from("quotes").getPublicUrl(filePath);
+      pdfUrl = publicUrlData.publicUrl;
+      await admin.from("quotes").update({ pdf_url: pdfUrl }).eq("id", quote.id);
+    }
+  } catch {
+    // se a geração falhar, o usuário ainda pode gerar manualmente na tela final
+    pdfUrl = null;
+  }
+
+  const redirectUrl = pdfUrl
+    ? `/dashboard/orcamento-criado?id=${quote.id}&pdfUrl=${encodeURIComponent(pdfUrl)}`
+    : `/dashboard/orcamento-criado?id=${quote.id}`;
+
+  redirect(redirectUrl);
 }
 
 export async function getServiceCatalog() {
