@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { updateQuote } from "../../actions";
+import { isValidWhatsapp } from "@/lib/validation";
 
 const C = { bg:"#FFFFFF", surface:"#F4F6F3", text:"#1A1A2E", muted:"#6B7280", border:"#E5E7EB", primary:"#639922", navy:"#1A1A2E" };
 const input: React.CSSProperties = { width:"100%", borderRadius:12, border:`1px solid ${C.border}`, background:C.surface, padding:"12px 14px", fontSize:14, color:C.text, outline:"none", fontFamily:"var(--font-body)" };
+const errorInput: React.CSSProperties = { border: "1px solid #ef4444" };
 
 type QuoteItem = { descricao: string; quantidade: number; valor_unit: number };
 
@@ -13,6 +15,8 @@ export default function EditQuoteForm({
   quoteId, clientName, clientWhatsapp, initialItems,
 }: { quoteId: string; clientName: string; clientWhatsapp: string; initialItems: QuoteItem[] }) {
   const [items, setItems]     = useState<QuoteItem[]>(initialItems);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [itemErrors, setItemErrors] = useState<string[]>([]);
   const [error, setError]     = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -38,10 +42,37 @@ export default function EditQuoteForm({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
+    setItemErrors([]);
+
+    const errors: Record<string, string> = {};
+    const itemValidation: string[] = [];
+
     if (items.length === 0) {
       setError("Adicione ao menos um serviço.");
       return;
     }
+
+    items.forEach((item, index) => {
+      if (!item.descricao.trim()) {
+        itemValidation[index] = "Descrição obrigatória.";
+        return;
+      }
+      if (!(item.quantidade > 0)) {
+        itemValidation[index] = "Quantidade deve ser maior que zero.";
+        return;
+      }
+      if (!(item.valor_unit >= 0)) {
+        itemValidation[index] = "Valor deve ser zero ou maior.";
+      }
+    });
+
+    if (itemValidation.some(Boolean)) {
+      setItemErrors(itemValidation);
+      setError("Corrija os campos marcados.");
+      return;
+    }
+
     setLoading(true);
     const fd = new FormData();
     fd.set("quote_id", quoteId);
@@ -82,25 +113,28 @@ export default function EditQuoteForm({
           </div>
 
           {items.map((item, i) => (
-            <div key={i} style={{ display:"flex", gap:8, marginBottom:8, alignItems:"center" }}>
-              <input
-                type="text" placeholder="Descrição" value={item.descricao}
-                onChange={(e) => updateItem(i, "descricao", e.target.value)}
-                style={{ ...input, flex:2, padding:"8px 10px", fontSize:13 }}
-              />
-              <input
-                type="number" placeholder="Qtd" value={item.quantidade} min={0.1} step={0.1}
-                onChange={(e) => updateItem(i, "quantidade", e.target.value)}
-                style={{ ...input, width:56, padding:"8px 8px", fontSize:13, textAlign:"center" }}
-              />
-              <input
-                type="number" placeholder="R$" value={item.valor_unit || ""} min={0} step={0.01}
-                onChange={(e) => updateItem(i, "valor_unit", e.target.value)}
-                style={{ ...input, width:80, padding:"8px 8px", fontSize:13 }}
-              />
-              <button type="button" onClick={() => removeItem(i)} style={{ background:"none", border:"none", color:"#ef4444", fontSize:16, cursor:"pointer", padding:4 }}>
-                ×
-              </button>
+            <div key={i} style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:8 }}>
+              <div style={{ display:"flex", gap:8, alignItems:"center", border: itemErrors[i] ? "1px solid #ef4444" : undefined, borderRadius:12, padding:itemErrors[i] ? "8px" : "0" }}>
+                <input
+                  type="text" placeholder="Descrição" value={item.descricao}
+                  onChange={(e) => updateItem(i, "descricao", e.target.value)}
+                  style={{ ...input, flex:2, padding:"8px 10px", fontSize:13, ...(itemErrors[i] ? errorInput : {}) }}
+                />
+                <input
+                  type="number" placeholder="Qtd" value={item.quantidade} min={0.1} step={0.1}
+                  onChange={(e) => updateItem(i, "quantidade", e.target.value)}
+                  style={{ ...input, width:56, padding:"8px 8px", fontSize:13, textAlign:"center", ...(itemErrors[i] ? errorInput : {}) }}
+                />
+                <input
+                  type="number" placeholder="R$" value={item.valor_unit || ""} min={0} step={0.01}
+                  onChange={(e) => updateItem(i, "valor_unit", e.target.value)}
+                  style={{ ...input, width:80, padding:"8px 8px", fontSize:13, ...(itemErrors[i] ? errorInput : {}) }}
+                />
+                <button type="button" onClick={() => removeItem(i)} style={{ background:"none", border:"none", color:"#ef4444", fontSize:16, cursor:"pointer", padding:4 }}>
+                  ×
+                </button>
+              </div>
+              {itemErrors[i] && <p style={{ fontSize:12, color:"#ef4444", marginTop:0 }}>{itemErrors[i]}</p>}
             </div>
           ))}
         </div>

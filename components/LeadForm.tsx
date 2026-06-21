@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { submitLead } from "@/app/actions";
+import { isValidEmail, isValidWhatsapp } from "@/lib/validation";
 
 const inputStyle: React.CSSProperties = {
   width: "100%", borderRadius: 12,
@@ -26,11 +27,30 @@ const btnStyle = (loading: boolean): React.CSSProperties => ({
 export default function LeadForm({ className = "" }: { className?: string }) {
   const [state, setState] = useState<"idle"|"loading"|"done"|"error">("idle");
   const [msg,   setMsg  ] = useState("");
-  const formRef          = useRef<HTMLFormElement>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const formRef = useRef<HTMLFormElement>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setState("loading");
+    setFieldErrors({});
+
+    const formData = new FormData(e.currentTarget);
+    const email = (formData.get("email") as string)?.trim() ?? "";
+    const whatsapp = (formData.get("whatsapp") as string) ?? "";
+    const errors: Record<string, string> = {};
+
+    if (!email) errors.email = "E-mail obrigatório.";
+    else if (!isValidEmail(email)) errors.email = "E-mail inválido.";
+    if (!whatsapp) errors.whatsapp = "WhatsApp obrigatório.";
+    else if (!isValidWhatsapp(whatsapp)) errors.whatsapp = "WhatsApp inválido.";
+
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
+      setState("idle");
+      return;
+    }
+
     const result = await submitLead(new FormData(e.currentTarget));
     if (result.success) {
       setState("done");
@@ -54,8 +74,10 @@ export default function LeadForm({ className = "" }: { className?: string }) {
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className={className} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <input type="email"   name="email"    placeholder="seu@email.com"              required style={inputStyle} />
-      <input type="tel"     name="whatsapp" placeholder="WhatsApp (DDD) 9 0000-0000" required style={inputStyle} />
+      <input type="email"   name="email"    placeholder="seu@email.com"              required style={{ ...inputStyle, ...(fieldErrors.email ? { border: "1px solid #ef4444" } : {}) }} />
+      {fieldErrors.email && <p style={{ fontSize: 12, color: "#ef4444", marginTop: -4 }}>{fieldErrors.email}</p>}
+      <input type="tel"     name="whatsapp" placeholder="WhatsApp (DDD) 9 0000-0000" required style={{ ...inputStyle, ...(fieldErrors.whatsapp ? { border: "1px solid #ef4444" } : {}) }} />
+      {fieldErrors.whatsapp && <p style={{ fontSize: 12, color: "#ef4444", marginTop: -4 }}>{fieldErrors.whatsapp}</p>}
       {state === "error" && <p style={{ fontSize: 12, color: "#ef4444", marginTop: -4 }}>{msg}</p>}
       <button type="submit" disabled={state === "loading"} style={btnStyle(state === "loading")}>
         {state === "loading" ? "Enviando…" : "Quero acesso gratuito"}

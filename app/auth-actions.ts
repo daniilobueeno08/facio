@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhone, isValidEmail, isValidWhatsapp } from "@/lib/validation";
 import { redirect } from "next/navigation";
 
 export async function signUp(formData: FormData) {
@@ -8,12 +9,19 @@ export async function signUp(formData: FormData) {
   const password = formData.get("password") as string;
   const nome     = formData.get("nome")     as string;
   const whatsapp = formData.get("whatsapp") as string;
+  const normalizedWhatsapp = normalizePhone(whatsapp);
 
   if (!email || !password || !nome || !whatsapp) {
     return { error: "Preencha todos os campos." };
   }
+  if (!isValidEmail(email)) {
+    return { error: "E-mail inválido." };
+  }
   if (password.length < 6) {
     return { error: "A senha precisa ter no mínimo 6 caracteres." };
+  }
+  if (!isValidWhatsapp(whatsapp)) {
+    return { error: "WhatsApp inválido." };
   }
 
   const supabase = await createClient();
@@ -21,7 +29,7 @@ export async function signUp(formData: FormData) {
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { nome, whatsapp } }, // alimenta o trigger handle_new_user()
+    options: { data: { nome, whatsapp: normalizedWhatsapp } }, // alimenta o trigger handle_new_user()
   });
 
   if (error) {
@@ -41,6 +49,12 @@ export async function signIn(formData: FormData) {
 
   if (!email || !password) {
     return { error: "Preencha e-mail e senha." };
+  }
+  if (!isValidEmail(email)) {
+    return { error: "E-mail inválido." };
+  }
+  if (password.length < 6) {
+    return { error: "A senha precisa ter no mínimo 6 caracteres." };
   }
 
   const supabase = await createClient();

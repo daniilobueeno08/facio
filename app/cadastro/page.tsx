@@ -3,18 +3,44 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signUp } from "@/app/auth-actions";
+import { isValidEmail, isValidWhatsapp } from "@/lib/validation";
 
 const C = { bg:"#FFFFFF", surface:"#F4F6F3", text:"#1A1A2E", muted:"#6B7280", border:"#E5E7EB", primary:"#639922", pale:"#EAF3DE" };
 const input: React.CSSProperties = { width:"100%", borderRadius:12, border:`1px solid ${C.border}`, background:C.surface, padding:"12px 16px", fontSize:14, color:C.text, outline:"none", fontFamily:"var(--font-body)" };
+const errorInput: React.CSSProperties = { border: "1px solid #ef4444" };
 
 export default function CadastroPage() {
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setFieldErrors({});
+
+    const formData = new FormData(e.currentTarget);
+    const nome = (formData.get("nome") as string)?.trim() ?? "";
+    const whatsapp = (formData.get("whatsapp") as string) ?? "";
+    const email = (formData.get("email") as string)?.trim() ?? "";
+    const password = (formData.get("password") as string) ?? "";
+
+    const errors: Record<string, string> = {};
+    if (!nome) errors.nome = "Nome obrigatório.";
+    if (!email) errors.email = "E-mail obrigatório.";
+    else if (!isValidEmail(email)) errors.email = "E-mail inválido.";
+    if (!whatsapp) errors.whatsapp = "WhatsApp obrigatório.";
+    else if (!isValidWhatsapp(whatsapp)) errors.whatsapp = "WhatsApp inválido.";
+    if (!password) errors.password = "Senha obrigatória.";
+    else if (password.length < 6) errors.password = "A senha precisa ter no mínimo 6 caracteres.";
+
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
+      setLoading(false);
+      return;
+    }
+
     const result = await signUp(new FormData(e.currentTarget));
     if (result?.error) {
       setError(result.error);
@@ -39,10 +65,14 @@ export default function CadastroPage() {
         </p>
 
         <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          <input type="text"  name="nome"     placeholder="Seu nome"                    required style={input} />
-          <input type="tel"   name="whatsapp" placeholder="WhatsApp (DDD) 9 0000-0000"  required style={input} />
-          <input type="email" name="email"    placeholder="seu@email.com"               required style={input} />
-          <input type="password" name="password" placeholder="Crie uma senha (mín. 6 caracteres)" required minLength={6} style={input} />
+          <input type="text"  name="nome"     placeholder="Seu nome"                    required style={{ ...input, ...(fieldErrors.nome ? errorInput : {}) }} />
+          {fieldErrors.nome && <p style={{ fontSize:12, color:"#ef4444", marginTop:-4 }}>{fieldErrors.nome}</p>}
+          <input type="tel"   name="whatsapp" placeholder="WhatsApp (DDD) 9 0000-0000"  required style={{ ...input, ...(fieldErrors.whatsapp ? errorInput : {}) }} />
+          {fieldErrors.whatsapp && <p style={{ fontSize:12, color:"#ef4444", marginTop:-4 }}>{fieldErrors.whatsapp}</p>}
+          <input type="email" name="email"    placeholder="seu@email.com"               required style={{ ...input, ...(fieldErrors.email ? errorInput : {}) }} />
+          {fieldErrors.email && <p style={{ fontSize:12, color:"#ef4444", marginTop:-4 }}>{fieldErrors.email}</p>}
+          <input type="password" name="password" placeholder="Crie uma senha (mín. 6 caracteres)" required minLength={6} style={{ ...input, ...(fieldErrors.password ? errorInput : {}) }} />
+          {fieldErrors.password && <p style={{ fontSize:12, color:"#ef4444", marginTop:-4 }}>{fieldErrors.password}</p>}
           {error && <p style={{ fontSize:12, color:"#ef4444", marginTop:-4 }}>{error}</p>}
           <button
             type="submit"

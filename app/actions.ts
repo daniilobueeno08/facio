@@ -1,5 +1,7 @@
 "use server";
 
+import { normalizePhone, isValidEmail, isValidWhatsapp } from "@/lib/validation";
+
 export async function submitLead(formData: FormData) {
   const whatsapp = formData.get("whatsapp") as string;
   const email    = formData.get("email")    as string;
@@ -7,11 +9,14 @@ export async function submitLead(formData: FormData) {
   if (!whatsapp || !email) {
     return { success: false, error: "Preencha todos os campos." };
   }
-
-  const phone = whatsapp.replace(/\D/g, "");
-  if (phone.length < 10) {
+  if (!isValidEmail(email)) {
+    return { success: false, error: "E-mail inválido." };
+  }
+  if (!isValidWhatsapp(whatsapp)) {
     return { success: false, error: "WhatsApp inválido." };
   }
+
+  const phone = normalizePhone(whatsapp);
 
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

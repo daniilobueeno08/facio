@@ -30,9 +30,41 @@ export default function GeneratePdfButton({
     }
   }
 
-  if (pdfUrl) {
-    const whatsappText = encodeURIComponent(`Olá! Aqui está o orçamento do serviço:\n\n${pdfUrl}`);
+  async function handleSendWhatsApp() {
+    if (!pdfUrl) return;
 
+    try {
+      // Baixa o PDF como blob
+      const response = await fetch(pdfUrl);
+      const blob = await response.blob();
+      const file = new File([blob], "orcamento-facio.pdf", { type: "application/pdf" });
+
+      // Tenta compartilhar o arquivo direto via Web Share API (funciona no celular)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "Orçamento Facio",
+          text: "Segue o orçamento do serviço solicitado.",
+        });
+        return;
+      }
+    } catch {
+      // se o share nativo falhar, cai no fallback abaixo
+    }
+
+    // Fallback: baixa o PDF no dispositivo e abre o WhatsApp
+    // O usuário anexa manualmente — mais confiável que link
+    const a = document.createElement("a");
+    a.href = pdfUrl;
+    a.download = "orcamento-facio.pdf";
+    a.click();
+
+    setTimeout(() => {
+      window.open("https://wa.me/", "_blank");
+    }, 1500);
+  }
+
+  if (pdfUrl) {
     return (
       <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
         <a
@@ -43,14 +75,16 @@ export default function GeneratePdfButton({
         >
           Ver PDF gerado
         </a>
-        <a
-          href={`https://wa.me/?text=${whatsappText}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display:"block", textAlign:"center", background:C.primary, color:"#fff", fontWeight:600, fontFamily:"var(--font-display)", fontSize:14, padding:"14px 0", borderRadius:12, textDecoration:"none" }}
+        <button
+          onClick={handleSendWhatsApp}
+          style={{ display:"block", width:"100%", textAlign:"center", background:C.primary, color:"#fff", fontWeight:600, fontFamily:"var(--font-display)", fontSize:14, padding:"14px 0", borderRadius:12, border:"none", cursor:"pointer" }}
         >
           Enviar PDF pelo WhatsApp
-        </a>
+        </button>
+        <p style={{ fontSize:11, color:C.muted, textAlign:"center", lineHeight:1.5 }}>
+          No celular: o PDF é compartilhado diretamente.<br/>
+          No computador: o PDF é baixado para você anexar no WhatsApp.
+        </p>
       </div>
     );
   }

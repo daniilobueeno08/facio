@@ -46,8 +46,14 @@ export default async function DashboardPage() {
         </Link>
 
         <Link href="/dashboard/historico" style={{ textDecoration:"none" }}>
-          <div style={{ background:"#fff", border:`1px solid ${C.border}`, color:C.navy, borderRadius:14, padding:"14px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:13, marginBottom:24 }}>
+          <div style={{ background:"#fff", border:`1px solid ${C.border}`, color:C.navy, borderRadius:14, padding:"14px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:13, marginBottom:10 }}>
             Ver histórico completo
+          </div>
+        </Link>
+
+        <Link href="/dashboard/catalogo" style={{ textDecoration:"none" }}>
+          <div style={{ background:"#fff", border:`1px solid ${C.border}`, color:C.muted, borderRadius:14, padding:"14px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:13, marginBottom:24 }}>
+            Gerenciar catálogo de serviços
           </div>
         </Link>
 

@@ -1,7 +1,9 @@
 "use server";
 
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { normalizePhone, isValidWhatsapp } from "@/lib/validation";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { QuotePdfDocument, type QuotePdfData } from "@/lib/pdf/QuotePdfDocument";
 
@@ -19,17 +21,43 @@ export async function createQuote(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Sessão expirada. Faça login novamente." };
 
-  const clientName     = formData.get("client_name")     as string;
-  const clientWhatsapp = formData.get("client_whatsapp") as string;
-  const itemsRaw       = formData.get("items_json")      as string;
+  const clientNameRaw     = formData.get("client_name")     as string;
+  const clientWhatsappRaw = formData.get("client_whatsapp") as string;
+  const itemsRaw          = formData.get("items_json")      as string;
 
-  if (!clientName || !clientWhatsapp || !itemsRaw) {
+  const clientName = clientNameRaw?.trim();
+  const clientWhatsapp = normalizePhone(clientWhatsappRaw ?? "");
+
+  if (!clientName || !clientWhatsappRaw || !itemsRaw) {
     return { error: "Preencha o cliente e ao menos um item." };
+  }
+  if (!isValidWhatsapp(clientWhatsappRaw)) {
+    return { error: "WhatsApp do cliente inválido." };
   }
 
   const items = JSON.parse(itemsRaw) as Array<{ descricao: string; quantidade: number; valor_unit: number }>;
-  if (items.length === 0) {
+  if (!Array.isArray(items) || items.length === 0) {
     return { error: "Adicione ao menos um serviço ao orçamento." };
+  }
+
+  for (const [index, item] of items.entries()) {
+    const descricao = item?.descricao?.toString().trim() ?? "";
+    const quantidade = Number(item?.quantidade ?? 0);
+    const valor_unit = Number(item?.valor_unit ?? 0);
+
+    if (!descricao) {
+      return { error: `Descrição obrigatória no item ${index + 1}.` };
+    }
+    if (!(quantidade > 0)) {
+      return { error: `Quantidade inválida no item ${index + 1}.` };
+    }
+    if (!(valor_unit >= 0)) {
+      return { error: `Valor inválido no item ${index + 1}.` };
+    }
+
+    item.descricao = descricao;
+    item.quantidade = quantidade;
+    item.valor_unit = valor_unit;
   }
 
   // 1. cria (ou reaproveita) o cliente
@@ -134,7 +162,7 @@ export async function getServiceCatalog() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("service_catalog")
-    .select("id, nome, valor")
+    .select("id, nome, valor_higienizacao, valor_blindagem, valor_combo")
     .order("nome");
   return data ?? [];
 }
@@ -144,11 +172,48 @@ export async function addCatalogItem(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Sessão expirada." };
 
-  const nome  = formData.get("nome")  as string;
-  const valor = parseFloat(formData.get("valor") as string);
+  const nome              = (formData.get("nome") as string)?.trim();
+  const valorHigienizacao = parseFloat(formData.get("valor_higienizacao") as string);
+  const valorBlindagemRaw = formData.get("valor_blindagem") as string;
+  const valorComboRaw     = formData.get("valor_combo") as string;
 
-  if (!nome || !valor) return { error: "Preencha nome e valor do serviço." };
+  if (!nome) return { error: "Informe o nome do serviço." };
+  if (!valorHigienizacao || valorHigienizacao <= 0) {
+    return { error: "Informe o valor de higienização — é obrigatório." };
+  }
 
-  await supabase.from("service_catalog").insert({ user_id: user.id, nome, valor });
+  const valorBlindagem = valorBlindagemRaw ? parseFloat(valorBlindagemRaw) : null;
+  const valorCombo     = valorComboRaw     ? parseFloat(valorComboRaw)     : null;
+
+  const { error } = await supabase.from("service_catalog").insert({
+    user_id: user.id,
+    nome,
+    valor_higienizacao: valorHigienizacao,
+    valor_blindagem: valorBlindagem,
+    valor_combo: valorCombo,
+  });
+
+  if (error) return { error: "Não foi possível salvar o serviço." };
+
+  revalidatePath("/dashboard/catalogo");
+  revalidatePath("/dashboard/novo-orcamento");
+  return { success: true };
+}
+
+export async function deleteCatalogItem(itemId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Sessão expirada." };
+
+  const { error } = await supabase
+    .from("service_catalog")
+    .delete()
+    .eq("id", itemId)
+    .eq("user_id", user.id);
+
+  if (error) return { error: "Não foi possível remover o serviço." };
+
+  revalidatePath("/dashboard/catalogo");
+  revalidatePath("/dashboard/novo-orcamento");
   return { success: true };
 }

@@ -80,7 +80,29 @@ export async function updateQuote(formData: FormData) {
   }
 
   const items = JSON.parse(itemsRaw) as Array<{ descricao: string; quantidade: number; valor_unit: number }>;
-  if (items.length === 0) return { error: "Adicione ao menos um serviço." };
+  if (!Array.isArray(items) || items.length === 0) {
+    return { error: "Adicione ao menos um serviço." };
+  }
+
+  for (const [index, item] of items.entries()) {
+    const descricao = item?.descricao?.toString().trim() ?? "";
+    const quantidade = Number(item?.quantidade ?? 0);
+    const valor_unit = Number(item?.valor_unit ?? 0);
+
+    if (!descricao) {
+      return { error: `Descrição obrigatória no item ${index + 1}.` };
+    }
+    if (!(quantidade > 0)) {
+      return { error: `Quantidade inválida no item ${index + 1}.` };
+    }
+    if (!(valor_unit >= 0)) {
+      return { error: `Valor inválido no item ${index + 1}.` };
+    }
+
+    item.descricao = descricao;
+    item.quantidade = quantidade;
+    item.valor_unit = valor_unit;
+  }
 
   const total = items.reduce((sum, i) => sum + i.quantidade * i.valor_unit, 0);
 
