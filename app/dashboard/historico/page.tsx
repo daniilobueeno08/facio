@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import QuoteRow from "./QuoteRow";
+import HistoricoTabs from "./HistoricoTabs";
 
 const C = { bg:"#FFFFFF", surface:"#F4F6F3", text:"#1A1A2E", muted:"#6B7280", border:"#E5E7EB", primary:"#639922", navy:"#1A1A2E" };
 
@@ -12,6 +12,21 @@ export default async function HistoricoPage() {
     .select("id, slug, status, total, pdf_url, created_at, paid_at, client_id, clients(nome, whatsapp)")
     .order("created_at", { ascending: false });
 
+  const normalized = (quotes ?? []).map((q) => {
+    const client = q.clients as unknown as { nome:string; whatsapp:string } | null;
+    return {
+      id: q.id,
+      status: q.status as "draft" | "sent" | "approved" | "paid" | "cancelled",
+      total: Number(q.total),
+      pdfUrl: q.pdf_url as string | null,
+      createdAt: q.created_at as string,
+      paidAt: q.paid_at as string | null,
+      clientId: q.client_id as string,
+      clientName: client?.nome ?? "Cliente",
+      clientWhatsapp: client?.whatsapp ?? "",
+    };
+  });
+
   return (
     <main style={{ minHeight:"100vh", background:C.surface }}>
       <header style={{ background:C.bg, borderBottom:`1px solid ${C.border}`, padding:"16px 20px", display:"flex", alignItems:"center", gap:12 }}>
@@ -21,33 +36,7 @@ export default async function HistoricoPage() {
         </span>
       </header>
 
-      <div style={{ maxWidth:520, margin:"0 auto", padding:"20px" }}>
-        {(!quotes || quotes.length === 0) && (
-          <p style={{ fontSize:13, color:C.muted, textAlign:"center", padding:"40px 0" }}>
-            Nenhum orçamento criado ainda.
-          </p>
-        )}
-
-        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          {(quotes ?? []).map((q) => {
-            const client = q.clients as unknown as { nome:string; whatsapp:string } | null;
-            return (
-              <QuoteRow
-                key={q.id}
-                id={q.id}
-                slug={q.slug}
-                status={q.status}
-                total={Number(q.total)}
-                pdfUrl={q.pdf_url}
-                createdAt={q.created_at}
-                paidAt={q.paid_at}
-                clientId={q.client_id}
-                clientName={client?.nome ?? "Cliente"}
-              />
-            );
-          })}
-        </div>
-      </div>
+      <HistoricoTabs quotes={normalized} />
     </main>
   );
 }

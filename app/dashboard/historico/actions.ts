@@ -55,6 +55,77 @@ export async function markQuoteAsPaid(quoteId: string, clientId: string) {
 }
 
 /**
+ * Cancela um orçamento — muda status para 'cancelled' SEM apagar do banco.
+ * Diferente de deleteQuote: o registro permanece, só sai do fluxo ativo.
+ */
+export async function cancelQuote(quoteId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Sessão expirada." };
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({ status: "cancelled" })
+    .eq("id", quoteId)
+    .eq("user_id", user.id);
+
+  if (error) return { error: "Não foi possível cancelar o orçamento." };
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/historico");
+  return { success: true };
+}
+
+/**
+ * Reativa um orçamento cancelado ou expirado — volta o status para 'draft'.
+ * Evita que o usuário tenha que recriar tudo do zero.
+ */
+export async function reactivateQuote(quoteId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Sessão expirada." };
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({ status: "draft" })
+    .eq("id", quoteId)
+    .eq("user_id", user.id);
+
+  if (error) return { error: "Não foi possível reativar o orçamento." };
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/historico");
+  return { success: true };
+}
+
+/**
+ * Aprova um orçamento — muda status para 'approved' e registra a interação.
+ */
+export async function approveQuote(quoteId: string, clientId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Sessão expirada." };
+
+  const { error } = await supabase
+    .from("quotes")
+    .update({ status: "approved" })
+    .eq("id", quoteId)
+    .eq("user_id", user.id);
+
+  if (error) return { error: "Não foi possível aprovar o orçamento." };
+
+  await supabase.from("interactions").insert({
+    client_id: clientId,
+    quote_id:  quoteId,
+    tipo:      "aprovacao",
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/historico");
+  return { success: true };
+}
+
+/**
  * Edita um orçamento — só permitido se status for 'draft' ou 'sent'.
  * Depois de 'approved' ou 'paid', a única ação possível é apagar.
  */
