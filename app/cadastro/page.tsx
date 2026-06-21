@@ -67,6 +67,7 @@ export default function CadastroPage() {
         <form onSubmit={handleSubmit} style={{ display:"flex", flexDirection:"column", gap:12 }}>
           <input type="text"  name="nome"     placeholder="Seu nome"                    required style={{ ...input, ...(fieldErrors.nome ? errorInput : {}) }} />
           {fieldErrors.nome && <p style={{ fontSize:12, color:"#ef4444", marginTop:-4 }}>{fieldErrors.nome}</p>}
+          <input type="text"  name="razao_social" placeholder="Razão social (opcional)" style={input} />
           <input type="tel"   name="whatsapp" placeholder="WhatsApp (DDD) 9 0000-0000"  required style={{ ...input, ...(fieldErrors.whatsapp ? errorInput : {}) }} />
           {fieldErrors.whatsapp && <p style={{ fontSize:12, color:"#ef4444", marginTop:-4 }}>{fieldErrors.whatsapp}</p>}
           <input type="email" name="email"    placeholder="seu@email.com"               required style={{ ...input, ...(fieldErrors.email ? errorInput : {}) }} />

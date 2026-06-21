@@ -61,12 +61,20 @@ export async function createQuote(formData: FormData) {
   }
 
   // 1. cria (ou reaproveita) o cliente
-  const { data: existingClient } = await supabase
+  const { data: existingClient, error: existingClientError } = await supabase
     .from("clients")
     .select("id")
     .eq("user_id", user.id)
     .eq("whatsapp", clientWhatsapp)
     .maybeSingle();
+
+  if (existingClientError) {
+    console.error("Erro ao verificar cliente:", existingClientError);
+    const details = [existingClientError.message, existingClientError.details, existingClientError.hint]
+      .filter(Boolean)
+      .join(" | ");
+    return { error: `Não foi possível verificar o cliente: ${details || JSON.stringify(existingClientError)}` };
+  }
 
   let clientId = existingClient?.id;
 
@@ -76,7 +84,15 @@ export async function createQuote(formData: FormData) {
       .insert({ user_id: user.id, nome: clientName, whatsapp: clientWhatsapp })
       .select("id")
       .single();
-    if (clientError) return { error: "Não foi possível salvar o cliente." };
+
+    if (clientError) {
+      console.error("Erro ao salvar cliente:", clientError);
+      const details = [clientError.message, clientError.details, clientError.hint]
+        .filter(Boolean)
+        .join(" | ");
+      return { error: `Não foi possível salvar o cliente: ${details || JSON.stringify(clientError)}` };
+    }
+
     clientId = newClient.id;
   }
 

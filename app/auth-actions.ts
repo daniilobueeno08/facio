@@ -9,6 +9,7 @@ export async function signUp(formData: FormData) {
   const password = formData.get("password") as string;
   const nome     = formData.get("nome")     as string;
   const whatsapp = formData.get("whatsapp") as string;
+  const razaoSocial = (formData.get("razao_social") as string)?.trim() ?? "";
   const normalizedWhatsapp = normalizePhone(whatsapp);
 
   if (!email || !password || !nome || !whatsapp) {
@@ -29,7 +30,7 @@ export async function signUp(formData: FormData) {
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { nome, whatsapp: normalizedWhatsapp } }, // alimenta o trigger handle_new_user()
+    options: { data: { nome, whatsapp: normalizedWhatsapp, razao_social: razaoSocial } }, // alimenta o trigger handle_new_user()
   });
 
   if (error) {
