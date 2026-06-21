@@ -5,7 +5,7 @@ import { isExpired, canEdit, STATUS_CONFIG, type QuoteStatus } from "@/lib/quote
 import {
   approveQuote, markQuoteAsPaid, cancelQuote, reactivateQuote, deleteQuote,
 } from "./actions";
-import type { QuoteData } from "./HistoricoTabs";
+import type { QuoteData } from "./HistoricoKanban";
 
 const C = { bg:"#FFFFFF", surface:"#F4F6F3", text:"#1A1A2E", muted:"#6B7280", border:"#E5E7EB", primary:"#639922", pale:"#EAF3DE", navy:"#1A1A2E" };
 
@@ -15,8 +15,9 @@ function formatDate(iso: string | null): string {
 }
 
 const btnBase: React.CSSProperties = {
-  fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "8px 12px",
-  cursor: "pointer", border: "none", fontFamily: "var(--font-body)", flex: 1,
+  fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "9px 12px",
+  cursor: "pointer", border: "none", fontFamily: "var(--font-body)", width: "100%",
+  textAlign: "center",
 };
 
 export default function KanbanCard({ quote, tab }: { quote: QuoteData; tab: string }) {
@@ -79,7 +80,7 @@ export default function KanbanCard({ quote, tab }: { quote: QuoteData; tab: stri
       )}
 
       {/* AÇÕES POR ABA */}
-      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
 
         {/* ABA NOVOS */}
         {tab === "novo" && !expired && (
@@ -115,7 +116,7 @@ export default function KanbanCard({ quote, tab }: { quote: QuoteData; tab: stri
         {/* ABA PAGOS — só visualização do PDF */}
         {tab === "pago" && (
           quote.pdfUrl ? (
-            <a href={quote.pdfUrl} target="_blank" rel="noopener noreferrer" style={{ ...btnBase, background:C.surface, color:C.text, border:`1px solid ${C.border}`, textAlign:"center", textDecoration:"none" }}>
+            <a href={quote.pdfUrl} target="_blank" rel="noopener noreferrer" style={{ ...btnBase, background:C.surface, color:C.text, border:`1px solid ${C.border}`, textDecoration:"none" }}>
               Ver PDF
             </a>
           ) : (
@@ -132,7 +133,7 @@ export default function KanbanCard({ quote, tab }: { quote: QuoteData; tab: stri
 
         {/* editar — só quando permitido e não expirado */}
         {canEdit(status) && !expired && tab === "novo" && (
-          <a href={`/dashboard/historico/${quote.id}/editar`} style={{ ...btnBase, background:"none", color:C.primary, border:`1px solid ${C.primary}`, textAlign:"center", textDecoration:"none", flex:"0 0 auto", padding:"8px 14px" }}>
+          <a href={`/dashboard/historico/${quote.id}/editar`} style={{ ...btnBase, background:"none", color:C.primary, border:`1px solid ${C.primary}`, textDecoration:"none" }}>
             Editar
           </a>
         )}

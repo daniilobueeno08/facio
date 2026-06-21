@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import HistoricoTabs from "./HistoricoTabs";
+import HistoricoKanban from "./HistoricoKanban";
 
 const C = { bg:"#FFFFFF", surface:"#F4F6F3", text:"#1A1A2E", muted:"#6B7280", border:"#E5E7EB", primary:"#639922", navy:"#1A1A2E" };
 
@@ -36,7 +36,7 @@ export default async function HistoricoPage() {
         </span>
       </header>
 
-      <HistoricoTabs quotes={normalized} />
+      <HistoricoKanban quotes={normalized} />
     </main>
   );
 }
