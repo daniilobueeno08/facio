@@ -32,6 +32,9 @@ export default async function DashboardPage() {
         <Link href="/dashboard/historico" style={{ textDecoration:"none" }}>
           <div style={{ background:C.bg, border:`1px solid ${C.border}`, color:C.navy, borderRadius:14, padding:"14px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:13, marginBottom:10 }}>Ver histórico completo</div>
         </Link>
+        <Link href="/dashboard/crediario" style={{ textDecoration:"none" }}>
+          <div style={{ background:"#FEF3C7", border:"1px solid #FDE68A", color:"#92400E", borderRadius:14, padding:"14px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:13, marginBottom:10 }}>🤝 Crediário — Contas a Receber</div>
+        </Link>
         <Link href="/dashboard/catalogo" style={{ textDecoration:"none" }}>
           <div style={{ background:C.bg, border:`1px solid ${C.border}`, color:C.muted, borderRadius:14, padding:"14px 20px", textAlign:"center", fontFamily:"var(--font-display)", fontWeight:600, fontSize:13, marginBottom:24 }}>Gerenciar catálogo de serviços</div>
         </Link>
