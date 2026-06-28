@@ -102,7 +102,7 @@ export async function createQuote(formData: FormData) {
 
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
-    .insert({ user_id: user.id, client_id: clientId, slug, status: "sent", total })
+    .insert({ user_id: user.id, client_id: clientId, slug, status: "sent", total, forma_pagamento: formData.get("forma_pagamento") as string || "avista", data_vencimento: formData.get("data_vencimento") as string || null })
     .select("id, slug")
     .single();
 
