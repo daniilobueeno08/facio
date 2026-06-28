@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ExtratoCliente from "./ExtratoCliente";
@@ -7,7 +7,7 @@ const C = { bg:"#FFFFFF", surface:"#F4F6F3", muted:"#6B7280", border:"#E5E7EB", 
 
 export default async function ExtratoPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   const { data: client } = await supabase
     .from("clients")
