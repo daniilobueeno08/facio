@@ -7,15 +7,16 @@ import KanbanCard from "./KanbanCard";
 const C = { bg:"#FFFFFF", surface:"#F4F6F3", text:"#1A1A2E", muted:"#6B7280", border:"#E5E7EB", primary:"#639922", navy:"#1A1A2E" };
 
 export type QuoteData = {
-  id: string;
-  status: QuoteStatus;
-  total: number;
-  pdfUrl: string | null;
-  createdAt: string;
-  paidAt: string | null;
-  clientId: string;
-  clientName: string;
+  id:             string;
+  status:         QuoteStatus;
+  total:          number;
+  pdfUrl:         string | null;
+  createdAt:      string;
+  paidAt:         string | null;
+  clientId:       string;
+  clientName:     string;
   clientWhatsapp: string;
+  saldoCrediario: number | null;
 };
 
 type TabKey = "novo" | "aprovado" | "pago" | "cancelado";
