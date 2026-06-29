@@ -102,7 +102,19 @@ export async function createQuote(formData: FormData) {
 
   const { data: quote, error: quoteError } = await supabase
     .from("quotes")
-    .insert({ user_id: user.id, client_id: clientId, slug, status: "sent", total, forma_pagamento: formData.get("forma_pagamento") as string || "avista", data_vencimento: formData.get("data_vencimento") as string || null })
+    .insert({
+      user_id:                  user.id,
+      client_id:                clientId,
+      slug,
+      status:                   "sent",
+      total,
+      forma_pagamento:          (formData.get("forma_pagamento") as string) || "avista",
+      data_vencimento:          (formData.get("data_vencimento") as string) || null,
+      // Snapshot: preserva nome e whatsapp no momento da criação do orçamento.
+      // Garante que o Kanban exiba o nome correto mesmo se o cadastro for editado depois.
+      client_name_snapshot:     clientName,
+      client_whatsapp_snapshot: clientWhatsapp,
+    })
     .select("id, slug")
     .single();
 

@@ -9,11 +9,15 @@ export default async function HistoricoPage() {
 
   const { data: quotes } = await supabase
     .from("quotes")
-    .select("id, slug, status, total, pdf_url, created_at, paid_at, client_id, clients(nome, whatsapp)")
+    .select(`
+      id, slug, status, total, pdf_url, created_at, paid_at, client_id,
+      client_name_snapshot, client_whatsapp_snapshot,
+      clients(nome, whatsapp)
+    `)
     .order("created_at", { ascending: false });
 
   const normalized = (quotes ?? []).map((q) => {
-    const client = q.clients as unknown as { nome:string; whatsapp:string } | null;
+    const client = q.clients as unknown as { nome: string; whatsapp: string } | null;
     return {
       id: q.id,
       status: q.status as "draft" | "sent" | "approved" | "paid" | "cancelled",
@@ -22,8 +26,9 @@ export default async function HistoricoPage() {
       createdAt: q.created_at as string,
       paidAt: q.paid_at as string | null,
       clientId: q.client_id as string,
-      clientName: client?.nome ?? "Cliente",
-      clientWhatsapp: client?.whatsapp ?? "",
+      // Prioriza snapshot (nome no momento do orçamento); fallback para cadastro atual
+      clientName: (q.client_name_snapshot as string | null) ?? client?.nome ?? "Cliente",
+      clientWhatsapp: (q.client_whatsapp_snapshot as string | null) ?? client?.whatsapp ?? "",
     };
   });
 
