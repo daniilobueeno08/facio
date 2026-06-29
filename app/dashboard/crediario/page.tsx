@@ -10,20 +10,23 @@ export default async function CrediarioPage() {
     .from("contas_receber")
     .select(`
       id, valor_total, valor_pago, status,
-      clients ( id, nome, saldo_devedor, limite_credito )
+      clients ( id, nome, limite_credito )
     `)
     .in("status", ["pendente", "parcial"])
     .order("created_at", { ascending: false });
 
-  // Agrupa por cliente
+  // Agrupa por cliente — usa valor real em aberto (total - pago), não saldo_devedor
   const mapa = new Map<string, { id:string; nome:string; saldo:number; limite:number; qtd:number }>();
   for (const c of (contas ?? [])) {
-    const cl = c.clients as unknown as { id:string; nome:string; saldo_devedor:number; limite_credito:number } | null;
+    const cl = c.clients as unknown as { id:string; nome:string; limite_credito:number } | null;
     if (!cl) continue;
+    const emAberto = Number(c.valor_total) - Number(c.valor_pago);
     if (!mapa.has(cl.id)) {
-      mapa.set(cl.id, { id:cl.id, nome:cl.nome, saldo:Number(cl.saldo_devedor), limite:Number(cl.limite_credito), qtd:0 });
+      mapa.set(cl.id, { id:cl.id, nome:cl.nome, saldo:0, limite:Number(cl.limite_credito), qtd:0 });
     }
-    mapa.get(cl.id)!.qtd++;
+    const entry = mapa.get(cl.id)!;
+    entry.saldo += emAberto;
+    entry.qtd++;
   }
 
   const clientes = [...mapa.values()].sort((a, b) => b.saldo - a.saldo);
@@ -34,7 +37,7 @@ export default async function CrediarioPage() {
       <header style={{ background:C.bg, borderBottom:`1px solid ${C.border}`, padding:"16px 20px", display:"flex", alignItems:"center", gap:12 }}>
         <Link href="/dashboard" style={{ color:C.muted, textDecoration:"none", fontSize:18 }}>←</Link>
         <span style={{ fontFamily:"var(--font-display)", fontWeight:600, fontSize:16, color:C.navy }}>
-          Crediário — Contas a Receber
+          Contas a Receber
         </span>
       </header>
 

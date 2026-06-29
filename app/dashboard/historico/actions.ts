@@ -50,8 +50,14 @@ export async function markQuoteAsPaid(
     client_id: clientId, quote_id: quoteId, tipo: "pagamento",
   });
 
-  // ── Crediário: cria conta a receber e incrementa saldo devedor ──────────
+  // ── Crediário: cria conta a receber, NÃO marca quote como paid ainda ──────
   if (formaPagamento === "crediario") {
+    // Reverte o status do quote para "approved" — só vai para "paid" quando quitar
+    await supabase
+      .from("quotes")
+      .update({ status: "approved", paid_at: null })
+      .eq("id", quoteId).eq("user_id", user.id);
+
     await supabase.from("contas_receber").insert({
       user_id:         user.id,
       client_id:       clientId,
@@ -69,13 +75,18 @@ export async function markQuoteAsPaid(
       .from("clients")
       .update({ saldo_devedor: Number(clientData?.saldo_devedor ?? 0) + Number(quote.total) })
       .eq("id", clientId);
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/historico");
+    revalidatePath("/dashboard/crediario");
+    return { success: true, isCrediario: true };
   }
   // ────────────────────────────────────────────────────────────────────────
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/historico");
   revalidatePath("/dashboard/crediario");
-  return { success: true, isCrediario: formaPagamento === "crediario" };
+  return { success: true, isCrediario: false };
 }
 
 export async function cancelQuote(quoteId: string) {

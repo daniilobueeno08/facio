@@ -88,7 +88,9 @@ function PaymentModal({
         dataVencimento || null,
       );
       if (res?.error) { setError(res.error); return; }
-      onSuccess();
+      // Crediário: quote permanece em Aprovados até quitação total.
+      // Fecha o modal — o card não sai da coluna.
+      onClose();
     });
   }
 
@@ -248,7 +250,8 @@ function PaymentModal({
             </p>
 
             <p style={{ margin: "0 0 8px", fontSize: 13, color: C.text }}>
-              O valor total será lançado no extrato do cliente como conta a receber.
+              O valor será lançado em <strong>Contas a Receber</strong>. O orçamento permanece
+              em <em>Aprovados</em> até a quitação total.
             </p>
 
             <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: C.muted }}>
