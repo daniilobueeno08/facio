@@ -24,6 +24,7 @@ export async function markQuoteAsPaid(
   clientId: string,
   formaPagamento: "avista" | "crediario" = "avista",
   dataVencimento?: string | null,
+  valorInicial?: number | null,   // valor já pago no momento do lançamento (crediário)
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -58,22 +59,47 @@ export async function markQuoteAsPaid(
       .update({ status: "approved", paid_at: null })
       .eq("id", quoteId).eq("user_id", user.id);
 
-    await supabase.from("contas_receber").insert({
+    // Calcula valor pago inicial e status da conta
+    const vpInicial  = Math.min(Math.max(valorInicial ?? 0, 0), Number(quote.total));
+    const statusConta = vpInicial >= Number(quote.total) ? "quitado"
+                      : vpInicial  > 0                  ? "parcial"
+                      :                                   "pendente";
+
+    const { data: novaConta } = await supabase.from("contas_receber").insert({
       user_id:         user.id,
       client_id:       clientId,
       quote_id:        quoteId,
       valor_total:     quote.total,
-      valor_pago:      0,
+      valor_pago:      vpInicial,
       data_vencimento: dataVencimento ?? null,
-      status:          "pendente",
-    });
+      status:          statusConta,
+    }).select("id").single();
 
+    // Se pagou algo agora, registra no histórico de pagamentos
+    if (vpInicial > 0 && novaConta?.id) {
+      await supabase.from("historico_pagamentos").insert({
+        conta_receber_id: novaConta.id,
+        valor:            vpInicial,
+        metodo_pagamento: "dinheiro",   // padrão; usuário pode detalhar no extrato
+        observacao:       "Entrada no lançamento do crediário",
+      });
+    }
+
+    // Se quitou na entrada, marca o quote como paid também
+    if (statusConta === "quitado") {
+      await supabase
+        .from("quotes")
+        .update({ status: "paid", paid_at: new Date().toISOString() })
+        .eq("id", quoteId).eq("user_id", user.id);
+    }
+
+    const saldoEmAberto = Number(quote.total) - vpInicial;
     const { data: clientData } = await supabase
       .from("clients").select("saldo_devedor").eq("id", clientId).single();
 
     await supabase
       .from("clients")
-      .update({ saldo_devedor: Number(clientData?.saldo_devedor ?? 0) + Number(quote.total) })
+      .update({ saldo_devedor: Number(clientData?.saldo_devedor ?? 0) + saldoEmAberto })
       .eq("id", clientId);
 
     revalidatePath("/dashboard");

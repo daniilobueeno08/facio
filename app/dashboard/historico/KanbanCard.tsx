@@ -61,6 +61,7 @@ function PaymentModal({
 }) {
   const [step, setStep]                 = useState<"escolha" | "crediario">("escolha");
   const [dataVencimento, setDataVenc]   = useState("");
+  const [valorInicial, setValorInicial] = useState("");
   const [isPending, startTransition]    = useTransition();
   const [error, setError]               = useState<string | null>(null);
 
@@ -81,11 +82,15 @@ function PaymentModal({
   function handleCrediario() {
     setError(null);
     startTransition(async () => {
+      const valorNum = parseFloat(valorInicial.replace(",", "."));
+      const vpFinal  = isNaN(valorNum) || valorNum < 0 ? 0
+                     : Math.min(valorNum, quote.total);
       const res = await markQuoteAsPaid(
         quote.id,
         quote.clientId,
         "crediario",
         dataVencimento || null,
+        vpFinal > 0 ? vpFinal : null,
       );
       if (res?.error) { setError(res.error); return; }
       // Crediário: quote permanece em Aprovados até quitação total.
@@ -253,6 +258,31 @@ function PaymentModal({
               O valor será lançado em <strong>Contas a Receber</strong>. O orçamento permanece
               em <em>Aprovados</em> até a quitação total.
             </p>
+
+            <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: C.muted }}>
+              Valor pago agora (opcional)
+            </label>
+            <input
+              type="number"
+              placeholder={`0,00 — máx. ${fmtCurrency(quote.total)}`}
+              value={valorInicial}
+              onChange={(e) => setValorInicial(e.target.value)}
+              min={0}
+              max={quote.total}
+              step={0.01}
+              style={{
+                width:        "100%",
+                padding:      "10px 12px",
+                borderRadius: 8,
+                border:       `1px solid ${C.border}`,
+                fontSize:     14,
+                color:        C.text,
+                background:   C.surface,
+                marginBottom: 14,
+                boxSizing:    "border-box",
+                outline:      "none",
+              }}
+            />
 
             <label style={{ display: "block", marginBottom: 6, fontSize: 12, fontWeight: 600, color: C.muted }}>
               Vencimento (opcional)
