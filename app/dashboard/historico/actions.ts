@@ -19,59 +19,24 @@ export async function deleteQuote(quoteId: string) {
   return { success: true };
 }
 
-/**
- * Marca como pago.
- * - À vista (isCrediario=false): status vira 'paid' direto.
- * - Crediário (isCrediario=true): status vira 'approved' (fica "em aberto"),
- *   cria conta_receber com o valor total e incrementa saldo_devedor do cliente.
- *   A baixa do pagamento é feita depois no extrato.
- */
-export async function markQuoteAsPaid(
-  quoteId: string,
-  clientId: string,
-  isCrediario = false,
-  vencimento: string | null = null,
-) {
+export async function markQuoteAsPaid(quoteId: string, clientId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Sessão expirada." };
 
-  const { data: quote } = await supabase
-    .from("quotes").select("total").eq("id", quoteId).eq("user_id", user.id).single();
-  if (!quote) return { error: "Orçamento não encontrado." };
+  const { error } = await supabase
+    .from("quotes")
+    .update({ status: "paid", paid_at: new Date().toISOString() })
+    .eq("id", quoteId).eq("user_id", user.id);
 
-  if (isCrediario) {
-    // Marca como crediário e mantém aprovado (conta em aberto)
-    await supabase
-      .from("quotes")
-      .update({ status: "approved", forma_pagamento: "crediario", data_vencimento: vencimento })
-      .eq("id", quoteId).eq("user_id", user.id);
+  if (error) return { error: "Não foi possível confirmar o pagamento." };
 
-    await supabase.from("contas_receber").insert({
-      user_id: user.id, client_id: clientId, quote_id: quoteId,
-      valor_total: quote.total, valor_pago: 0,
-      data_vencimento: vencimento, status: "pendente",
-    });
-
-    const { data: c } = await supabase.from("clients").select("saldo_devedor").eq("id", clientId).single();
-    await supabase.from("clients")
-      .update({ saldo_devedor: Number(c?.saldo_devedor ?? 0) + Number(quote.total) })
-      .eq("id", clientId);
-  } else {
-    // À vista: paga direto
-    await supabase
-      .from("quotes")
-      .update({ status: "paid", paid_at: new Date().toISOString(), forma_pagamento: "avista" })
-      .eq("id", quoteId).eq("user_id", user.id);
-
-    await supabase.from("interactions").insert({
-      client_id: clientId, quote_id: quoteId, tipo: "pagamento",
-    });
-  }
+  await supabase.from("interactions").insert({
+    client_id: clientId, quote_id: quoteId, tipo: "pagamento",
+  });
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/historico");
-  revalidatePath("/dashboard/crediario");
   return { success: true };
 }
 
@@ -105,10 +70,25 @@ export async function reactivateQuote(quoteId: string) {
   return { success: true };
 }
 
+/**
+ * Aprova um orçamento.
+ * Se forma_pagamento === 'crediario': cria automaticamente uma conta a receber
+ * e incrementa o saldo devedor do cliente.
+ */
 export async function approveQuote(quoteId: string, clientId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Sessão expirada." };
+
+  // Busca dados do orçamento para checar forma de pagamento
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("id, total, forma_pagamento, data_vencimento")
+    .eq("id", quoteId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!quote) return { error: "Orçamento não encontrado." };
 
   const { error } = await supabase
     .from("quotes").update({ status: "approved" })
@@ -120,9 +100,32 @@ export async function approveQuote(quoteId: string, clientId: string) {
     client_id: clientId, quote_id: quoteId, tipo: "aprovacao",
   });
 
+  // ── Lógica de Crediário ──────────────────────────────────────
+  if (quote.forma_pagamento === "crediario") {
+    await supabase.from("contas_receber").insert({
+      user_id:         user.id,
+      client_id:       clientId,
+      quote_id:        quoteId,
+      valor_total:     quote.total,
+      valor_pago:      0,
+      data_vencimento: quote.data_vencimento ?? null,
+      status:          "pendente",
+    });
+
+    const { data: clientData } = await supabase
+      .from("clients").select("saldo_devedor").eq("id", clientId).single();
+
+    await supabase
+      .from("clients")
+      .update({ saldo_devedor: Number(clientData?.saldo_devedor ?? 0) + Number(quote.total) })
+      .eq("id", clientId);
+  }
+  // ─────────────────────────────────────────────────────────
+
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/historico");
-  return { success: true };
+  revalidatePath("/dashboard/crediario");
+  return { success: true, isCrediário: quote.forma_pagamento === "crediario" };
 }
 
 export async function getQuoteForEdit(quoteId: string) {
@@ -159,7 +162,11 @@ export async function updateQuote(formData: FormData) {
 
   const total = items.reduce((sum, i) => sum + i.quantidade * i.valor_unit, 0);
 
-  await supabase.from("quotes").update({ total }).eq("id", quoteId);
+  const { error: updateError } = await supabase
+    .from("quotes").update({ total }).eq("id", quoteId);
+
+  if (updateError) return { error: "Não foi possível atualizar o orçamento." };
+
   await supabase.from("quote_items").delete().eq("quote_id", quoteId);
   await supabase.from("quote_items").insert(
     items.map((i) => ({ quote_id: quoteId, descricao: i.descricao, quantidade: i.quantidade, valor_unit: i.valor_unit }))
