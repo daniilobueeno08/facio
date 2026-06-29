@@ -534,6 +534,26 @@ export default function KanbanCard({ quote, tab }: { quote: QuoteData; tab: Colu
           <StatusBadge tab={tab} />
         </div>
 
+        {/* Badge saldo crediário — visível quando há valor em aberto */}
+        {quote.saldoCrediario !== null && quote.saldoCrediario > 0 && (
+          <div style={{
+            display:        "flex",
+            alignItems:     "center",
+            justifyContent: "space-between",
+            background:     "#FEF3C7",
+            border:         "1px solid #FDE68A",
+            borderRadius:   8,
+            padding:        "7px 10px",
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#92400E" }}>
+              📋 Crediário em aberto
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: "#92400E" }}>
+              {quote.saldoCrediario.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} restante
+            </span>
+          </div>
+        )}
+
         {/* Feedback de erro */}
         {feedback && (
           <p style={{ margin: 0, fontSize: 12, color: C.danger, fontWeight: 500 }}>{feedback}</p>

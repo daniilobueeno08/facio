@@ -17,15 +17,16 @@ const C = {
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 export type QuoteData = {
-  id:            string;
-  status:        QuoteStatus;
-  total:         number;
-  pdfUrl:        string | null;
-  createdAt:     string;
-  paidAt:        string | null;
-  clientId:      string;
-  clientName:    string;
+  id:             string;
+  status:         QuoteStatus;
+  total:          number;
+  pdfUrl:         string | null;
+  createdAt:      string;
+  paidAt:         string | null;
+  clientId:       string;
+  clientName:     string;
   clientWhatsapp: string;
+  saldoCrediario: number | null; // saldo restante em aberto no crediário (null = sem crediário)
 };
 
 type ColumnKey = "novo" | "aprovado" | "pago" | "cancelado";
