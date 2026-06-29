@@ -19,10 +19,25 @@ export async function deleteQuote(quoteId: string) {
   return { success: true };
 }
 
-export async function markQuoteAsPaid(quoteId: string, clientId: string) {
+export async function markQuoteAsPaid(
+  quoteId: string,
+  clientId: string,
+  formaPagamento: "avista" | "crediario" = "avista",
+  dataVencimento?: string | null,
+) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Sessão expirada." };
+
+  // Busca o total do orçamento (necessário para crediário)
+  const { data: quote } = await supabase
+    .from("quotes")
+    .select("total")
+    .eq("id", quoteId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!quote) return { error: "Orçamento não encontrado." };
 
   const { error } = await supabase
     .from("quotes")
@@ -35,9 +50,32 @@ export async function markQuoteAsPaid(quoteId: string, clientId: string) {
     client_id: clientId, quote_id: quoteId, tipo: "pagamento",
   });
 
+  // ── Crediário: cria conta a receber e incrementa saldo devedor ──────────
+  if (formaPagamento === "crediario") {
+    await supabase.from("contas_receber").insert({
+      user_id:         user.id,
+      client_id:       clientId,
+      quote_id:        quoteId,
+      valor_total:     quote.total,
+      valor_pago:      0,
+      data_vencimento: dataVencimento ?? null,
+      status:          "pendente",
+    });
+
+    const { data: clientData } = await supabase
+      .from("clients").select("saldo_devedor").eq("id", clientId).single();
+
+    await supabase
+      .from("clients")
+      .update({ saldo_devedor: Number(clientData?.saldo_devedor ?? 0) + Number(quote.total) })
+      .eq("id", clientId);
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/historico");
-  return { success: true };
+  revalidatePath("/dashboard/crediario");
+  return { success: true, isCrediario: formaPagamento === "crediario" };
 }
 
 export async function cancelQuote(quoteId: string) {
